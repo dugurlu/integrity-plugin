@@ -4,10 +4,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.BuildListener;
-import hudson.model.TaskListener;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
+import hudson.model.*;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.FormValidation;
 
@@ -41,6 +38,8 @@ import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 import com.mks.api.util.Base64;
+
+import javax.annotation.Nonnull;
 
 /**
  * This class provides an integration between Hudson/Jenkins for Continuous Builds and 
@@ -93,13 +92,13 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 							String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName)
 	{
     	// Log the construction
-    	Logger.debug("IntegritySCM constructor has been invoked!");
-		// Initialize the class variables
-    	this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
-    	this.browser = browser;
-    	setIntegrationPointHost(integrationPointHost);
-    	setHost(host);
-    	setIntegrationPointPort(integrationPointPort);
+        Logger.debug("IntegritySCM constructor has been invoked!");
+        // Initialize the class variables
+        this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
+        this.browser = browser;
+        setIntegrationPointHost(integrationPointHost);
+        setHost(host);
+        setIntegrationPointPort(integrationPointPort);
     	setPort(port);
     	setSecure(secure);
     	setUserName(userName);
@@ -552,11 +551,11 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	 * @see hudson.scm.SCM#calcRevisionsFromBuild(hudson.model.AbstractBuild, hudson.Launcher, hudson.model.TaskListener)
 	 */
 	@Override
-	public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener) throws IOException, InterruptedException 
+	public SCMRevisionState calcRevisionsFromBuild(@Nonnull Run<?, ?> run, FilePath workspace, Launcher launcher, @Nonnull TaskListener listener) throws IOException, InterruptedException
 	{
 		// Log the call for debug purposes
 		Logger.debug("calcRevisionsFromBuild() invoked...!");
-		return new IntegrityRevisionState(build.getRootDir());
+		return new IntegrityRevisionState(run.getRootDir());
 	}
 
 	/**
@@ -611,11 +610,11 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		{ 
 			String[] filterTokens = excludeList.split(",|;");
 			// prepare a AND combination of exclude filters (one filter each filter)
-			for( int i = 0; i < filterTokens.length; i++ )
+			for(String filterToken : filterTokens)
 			{ 
-				if (filterTokens[i]!= null)
+				if (filterToken != null)
 				{
-					siViewProjectCmd.addOption(new Option("filter", "!file:"+filterTokens[i]));
+					siViewProjectCmd.addOption(new Option("filter", "!file:"+filterToken));
 				}
 			}                              
 		}
@@ -675,18 +674,18 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	 * @see hudson.scm.SCM#checkout(hudson.model.AbstractBuild, hudson.Launcher, hudson.FilePath, hudson.model.BuildListener, java.io.File)
 	 */
 	@Override
-	public boolean checkout(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, 
-							BuildListener listener, File changeLogFile) throws IOException, InterruptedException 
+	public void checkout(Run<?, ?> run, Launcher launcher, FilePath workspace,
+							TaskListener listener, File changeLogFile, SCMRevisionState baseline) throws IOException, InterruptedException
 	{
 		// Log the invocation... 
 		Logger.debug("Start execution of checkout() routine...!");
 		
 		// Re-evaluate the config path to resolve any groovy expressions...
-		String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), configPath);
+		String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), configPath);
 		
 		// Provide links to the Change and Build logs for easy access from Integrity
-		listener.getLogger().println("Change Log: " + ciServerURL + build.getUrl() + "changes");
-		listener.getLogger().println("Build Log: " + ciServerURL + build.getUrl() + "console");
+		listener.getLogger().println("Change Log: " + ciServerURL + run.getUrl() + "changes");
+		listener.getLogger().println("Build Log: " + ciServerURL + run.getUrl() + "console");
 		
 		// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
 		APISession api = APISession.create(this);	
@@ -694,7 +693,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		if( null == api )
 		{
 			listener.getLogger().println("Failed to establish an API connection to the Integrity Server!");
-			return false;
+			return;
 		}
 		// Lets also open the change log file for writing...
 		// Override file.encoding property so that we write as UTF-8 and do not have problems with special characters
@@ -703,7 +702,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		{
 			// Next, load up the information for this Integrity Project's configuration
 			listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
-			initializeCMProject(api, build.getRootDir(), resolvedConfigPath);
+			initializeCMProject(api, run.getRootDir(), resolvedConfigPath);
 			IntegrityCMProject siProject = getIntegrityProject();
 			// Check to see we need to checkpoint before the build
 			if( checkpointBeforeBuild )
@@ -713,7 +712,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 				{
 					// Execute a pre-build checkpoint...
     				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
-    				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), tagName));
+    				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), tagName));
     				Logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
 					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
 					String chkpt = wi.getResult().getField("resultant").getItem().getId();
@@ -735,7 +734,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 			initializeCMProjectMembers(api);
 					
 	    	// Now, we need to find the project state from the previous build.
-			AbstractBuild<?,?> previousBuild = build.getPreviousBuild();
+			Run<?,?> previousBuild = run.getPreviousBuild();
 	        while( null != previousBuild )
 	        {
 	        	// Go back through each previous build to find a useful project state
@@ -770,7 +769,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	        // Now, lets figure out how to populate the workspace...
 			List<Hashtable<CM_PROJECT, Object>> projectMembersList = siProject.viewProject();
 			List<String> dirList = siProject.getDirList();
-			IntegrityCheckoutTask coTask = null;
+			IntegrityCheckoutTask coTask;
 			if( null == prevProjectDB )
 			{ 
 				// If we we were not able to establish the previous project state, 
@@ -793,22 +792,22 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 				if( fetchChangedWorkspaceFiles ){ siProject.updateChecksum(coTask.getChecksumUpdates()); }
 				// Write out the change log file, which will be used by the parser to report the updates
 				listener.getLogger().println("Writing build change log...");
-				writer.println(siProject.getChangeLog(String.valueOf(build.getNumber()), projectMembersList));				
+				writer.println(siProject.getChangeLog(String.valueOf(run.getNumber()), projectMembersList));
 				listener.getLogger().println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
 				// Delete non-members in this workspace, if appropriate...
 				if( deleteNonMembers )
 				{
-				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(build, listener, alternateWorkspace, getIntegrityProject());
+				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(run, listener, workspace, getIntegrityProject());
 				    if( ! workspace.act(deleteNonMembers) )
 					{
-				        return false;
+				        return;
 				    }
 				}
 			}
 			else
 			{
 				// Checkout failed!  Returning false...
-				return false;
+				return;
 			}
 		}
 	    catch(APIException aex)
@@ -821,7 +820,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		Logger.fatal(aex);
-    		return false;
+    		return;
 	    }
 		catch(SQLException sqlex)
 		{
@@ -829,15 +828,12 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     		listener.getLogger().println("A SQL Exception was caught!"); 
     		listener.getLogger().println(sqlex.getMessage());
     		Logger.fatal(sqlex);
-    		return false;			
+    		return;
 		}
 	    finally
 	    {
-	        if( writer != null )
-			{
-	            writer.close();
-	        }
-	    	if( getIntegrityProject() != null )
+            writer.close();
+            if( getIntegrityProject() != null )
 			{
 	    		getIntegrityProject().closeProjectDB();
 	    	}
@@ -845,7 +841,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	    }
 
 	    //If we got here, everything is good on the checkout...
-	    return true;
+	    return;
 	}
 	
 
@@ -857,8 +853,8 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	 * @see hudson.scm.SCM#compareRemoteRevisionWith(hudson.model.AbstractProject, hudson.Launcher, hudson.FilePath, hudson.model.TaskListener, hudson.scm.SCMRevisionState)
 	 */
 	@Override
-	protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
-													final TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException	
+    public PollingResult compareRemoteRevisionWith(@Nonnull Job<?, ?> job, Launcher launcher, FilePath workspace,
+                                                   @Nonnull final TaskListener listener, @Nonnull SCMRevisionState _baseline) throws IOException, InterruptedException
 	{
 		// Log the call for now...
 		Logger.debug("compareRemoteRevisionWith() invoked...!");
@@ -867,9 +863,8 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         // Lets get the baseline from our last build
         if( _baseline instanceof IntegrityRevisionState )
         {
-        	baseline = (IntegrityRevisionState)_baseline;
-        	// Get the baseline that contains the last build
-        	AbstractBuild<?,?> lastBuild = project.getLastBuild();
+            // Get the baseline that contains the last build
+        	Run<?,?> lastBuild = job.getLastBuild();
         	if( null == lastBuild )
         	{
         		// We've got no previous builds, build now!
@@ -879,7 +874,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         	else
         	{
         		// Lets trying to get the baseline associated with the last build
-        		baseline = (IntegrityRevisionState)calcRevisionsFromBuild(lastBuild, launcher, listener);
+        		baseline = (IntegrityRevisionState)calcRevisionsFromBuild(lastBuild, workspace, launcher, listener);
         		if( null != baseline && null != baseline.getProjectDB() )
         		{
         			// Next, load up the information for the current Integrity Project
@@ -890,7 +885,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	        			try
 	        			{
 	        				// Re-evaluate the config path to resolve any groovy expressions...
-	        				String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(project.getCharacteristicEnvVars(), configPath);
+	        				String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(job.getCharacteristicEnvVars(), configPath);
 	        				listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
 	        				initializeCMProject(api, new File(lastBuild.getRootDir(), "PollingResult"), resolvedConfigPath);
 	        				listener.getLogger().println("Preparing to execute si viewproject for " + resolvedConfigPath);
@@ -1082,7 +1077,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 			Logger.debug("defaultIPPort = " + defaultIPPort);
 			
 			Logger.debug("mks.defaultSecure = " + req.getParameter("mks.defaultSecure"));
-			defaultSecure = "on".equalsIgnoreCase(Util.fixEmptyAndTrim(req.getParameter("mks.defaultSecure"))) ? true : false;
+			defaultSecure = "on".equalsIgnoreCase(Util.fixEmptyAndTrim(req.getParameter("mks.defaultSecure")));
 			Logger.debug("defaultSecure = " + defaultSecure);
 			
 			Logger.debug("mks.defaultUserName = " + req.getParameter("mks.defaultUserName"));

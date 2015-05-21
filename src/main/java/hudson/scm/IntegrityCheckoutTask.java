@@ -3,6 +3,7 @@ package hudson.scm;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
 import java.io.File;
@@ -21,8 +22,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import com.mks.api.response.APIException;
+import jenkins.SlaveToMasterFileCallable;
+import org.apache.tools.ant.taskdefs.Parallel;
 
-public class IntegrityCheckoutTask implements FileCallable<Boolean> 
+public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean>
 {
 	private static final long serialVersionUID = 1240357991626897900L;
 	private static final int CHECKOUT_TRESHOLD = 500;	
@@ -33,7 +36,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	private final boolean cleanCopy;
 	private final String alternateWorkspaceDir;
 	private final boolean fetchChangedWorkspaceFiles;
-	private final BuildListener listener;
+	private final TaskListener listener;
 	private IntegrityConfigurable integrityConfig;
     // Checksum Hash
     private ConcurrentHashMap<String, String> checksumHash;
@@ -58,7 +61,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	 */
 	public IntegrityCheckoutTask(List<Hashtable<CM_PROJECT, Object>> projectMembersList, List<String> dirList,
 									String alternateWorkspaceDir, String lineTerminator, boolean restoreTimestamp,
-									boolean cleanCopy, boolean fetchChangedWorkspaceFiles,int checkoutThreadPoolSize, BuildListener listener, IntegrityConfigurable integrityConfig)
+									boolean cleanCopy, boolean fetchChangedWorkspaceFiles,int checkoutThreadPoolSize, TaskListener listener, IntegrityConfigurable integrityConfig)
 	{
 		this.projectMembersList = projectMembersList;
 		this.dirList = dirList;
@@ -84,10 +87,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	 */
 	private void createFolderStructure(FilePath workspace)
 	{
-		Iterator<String> folders = dirList.iterator();
-		while( folders.hasNext() )
+		for( String folder : dirList )
 		{
-			File dir = new File(workspace + folders.next());
+			File dir = new File(workspace + folder);
 			if( ! dir.isDirectory() )
 			{
 				Logger.debug("Creating folder: " + dir.getAbsolutePath());
@@ -117,7 +119,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         protected Integer initialValue()
         {
             Logger.debug("Trying to retrieve initial value for open file handler" );
-            return new Integer(1);
+            return 1;
         }
 	}
 	
@@ -131,14 +133,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         private Vector<APISession> sessions = new Vector<APISession>();
    
         /**
-         * Initialize our constructor with the all the information needed to create an APISession 
-         * @param ipHost Integration Point host name
-         * @param ipPortNum Integration Point port
-         * @param host Integrity Server host name
-         * @param portNum Integrity Server port
-         * @param user Integrity Server user id
-         * @param paswd Integrity Server user's password
-         * @param secure Flag to determine whether or not secure sockets are in use
+         * Initialize our constructor with the all the information needed to create an APISession
          */
         public ThreadLocalAPISession(IntegrityConfigurable integrityConfig)
         {
@@ -285,9 +280,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 			createFolderStructure(workspace);
 
 			// Perform a synchronize of each file in the member list... 
-			for( Iterator<Hashtable<CM_PROJECT, Object>> it = projectMembersList.iterator(); it.hasNext(); )
-			{
-				Hashtable<CM_PROJECT, Object> memberInfo = it.next();
+			for(Hashtable<CM_PROJECT, Object> memberInfo : projectMembersList)
+            {
 				short deltaFlag = (null == memberInfo.get(CM_PROJECT.DELTA) ? -1 : Short.valueOf(memberInfo.get(CM_PROJECT.DELTA).toString()));
 				File targetFile = new File(workspace + memberInfo.get(CM_PROJECT.RELATIVE_FILE).toString());
 				String memberName = memberInfo.get(CM_PROJECT.NAME).toString();
@@ -362,10 +356,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
                         {
                     		listener.getLogger().println(e.getMessage());
                     		Logger.error(e);
-                    		StackTraceElement[] st = e.getStackTrace();
-                    		for( int i = 0; i < st.length; i++ )
+                    		for(StackTraceElement ste: e.getStackTrace())
                     		{
-                    			Logger.error("\tat " + st[i].getClassName() + "." + st[i].getMethodName() + "(" + st[i].getFileName() + ":" + st[i].getLineNumber() + ")");
+                    			Logger.error("\tat " + ste.getClassName() + "." + ste.getMethodName() + "(" + ste.getFileName() + ":" + ste.getLineNumber() + ")");
                     		}
                     		
                     		if( null != e.getMessage() && e.getMessage().indexOf("Unbuffered entity enclosing request can not be repeated") > 0 )
@@ -419,11 +412,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		}	
 		finally
 		{
-		    if( generateAPISession != null )
-		    {
-		    	generateAPISession.remove();
-		    }
-		}
+            generateAPISession.remove();
+        }
 		
 	    //If we got here, everything is good on the checkout...		
 		return true;

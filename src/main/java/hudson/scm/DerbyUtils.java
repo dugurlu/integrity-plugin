@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Hashtable;
 
+import hudson.model.Run;
 import org.apache.commons.io.IOUtils;
 
 /**
@@ -451,4 +452,17 @@ public class DerbyUtils
     	}
     	return projectDB;
     }
+
+	public static File getIntegrityCMProjectDB(Run run, String DBName)
+	{
+		File projectDB = null;
+		if(null != run) {
+			projectDB = new File(run.getRootDir(), String.format(DERBY_DB_FOLDER, DBName));
+			if(! projectDB. isDirectory() )
+			{
+				Logger.debug("Integrity SCM Project DB not found for build " + run.getNumber() + "!");
+			}
+		}
+		return projectDB;
+	}
 }
