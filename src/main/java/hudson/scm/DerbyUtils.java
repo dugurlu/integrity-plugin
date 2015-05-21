@@ -415,7 +415,7 @@ public class DerbyUtils
 
 	/**
 	 * This function provides a count of the total number of rows in the ResultSet
-	 * @param set
+	 * @param rs
 	 * @return
 	 * @throws SQLException
 	 */

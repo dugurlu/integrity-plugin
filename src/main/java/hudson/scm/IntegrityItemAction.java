@@ -19,11 +19,11 @@ import hudson.Util;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
-import hudson.tasks.test.TestResult;
+
+import hudson.tasks.junit.CaseResult;
+import hudson.tasks.junit.TestResult;
 import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction;
-import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
-
 import org.kohsuke.stapler.StaplerRequest;
 
 import net.sf.json.JSONObject;
@@ -359,7 +359,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	
 	/**
 	 * Sets the sunfire reports folder for JUnit test results
-	 * @param testResultsDir
+	 * @param testSuiteContainsField
 	 */
 	public void setTestSuiteContainsField(String testSuiteContainsField)
 	{
@@ -463,7 +463,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 		Logger.debug(editIssueResponse.getCommandString() + " returned " + returnCode);        					
 		listener.getLogger().println("Updated build item '" + buildItemID + "' with build status!");
 		
-		return (returnCode == 0 ? true :  false);
+		return (returnCode == 0);
     }
 
     /**
@@ -539,7 +539,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
     		// Root package test
     		if( tokens.length == 2 && testCaseID.indexOf('.') == testCaseID.lastIndexOf('.') )
     		{
-    			junitTestCaseID.append("(root)/" + testCaseID.replace('.', '/'));
+    			junitTestCaseID.append("(root)/").append(testCaseID.replace('.', '/'));
     			return junitTestCaseID.toString();
     		}
     		
@@ -561,7 +561,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
     		{
         		// Seems like a root package type test, but there is no test name - very odd!
     			Logger.warn("Invalid format for Test Case ID - should be in the format <packagename>.<classname>.<testname>!");
-    			junitTestCaseID.append("(root)/" + testCaseID);
+    			junitTestCaseID.append("(root)/").append(testCaseID);
     			return junitTestCaseID.toString();
     		}
     	}
@@ -582,8 +582,8 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 		// Look for the specific Tests we're interested in...
 		for( Item test : testCaseList  )
 		{ 
-			Field testCaseIDFld = null;
-			Field containsFld = null;
+			Field testCaseIDFld;
+			Field containsFld;
 			try
 			{
 				// This should work on a 10.5 and prior...
@@ -602,7 +602,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 				String testCaseID = testCaseIDFld.getValueAsString();
 				String junitTestName = getJUnitID(testCaseID);
 				Logger.debug("Looking for external test " + testCaseID + " internal JUnit ID " + junitTestName);
-				TestResult caseResult = testResult.findCorrespondingResult(junitTestName);
+				TestResult caseResult = (TestResult) testResult.findCorrespondingResult(junitTestName);
 				// Update Integrity only if we find a matching Test Case Result
 				if( null != caseResult )
 				{
@@ -629,13 +629,13 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
     
 	/**
 	 * Returns the first Test Result encountered in an Aggregated Test Result Action
-	 * @param atr Aggregated Test Result Action
+	 * @param testResultAction Aggregated Test Result Action
 	 * @return
 	 */
 	private TestResult getTestResult(AggregatedTestResultAction testResultAction)
 	{
-		List<ChildReport> cList = testResultAction.getChildReports();
-        for (ChildReport childReport : cList) 
+		List<AggregatedTestResultAction.ChildReport> cList = testResultAction.getChildReports();
+        for (AggregatedTestResultAction.ChildReport childReport : cList)
         {
             if (childReport.result instanceof TestResult) 
             {
@@ -645,10 +645,8 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
         		Logger.debug("Total failed count: " + testResult.getFailCount());
         		Logger.debug("Total skipped count: " + testResult.getSkipCount());
         		Logger.debug("Failed Test Details:");
-        		Iterator<? extends TestResult> failedResultIterator = testResult.getFailedTests().iterator();
-        		while( failedResultIterator.hasNext() )
+        		for(CaseResult caseResult : testResult.getFailedTests())
         		{
-        			TestResult caseResult = failedResultIterator.next();
         			Logger.debug("ID: " + caseResult.getId() + " " + caseResult.getErrorDetails());	
         		}
             	
@@ -711,8 +709,8 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
         	try
         	{
         		// First lets find the build item or test session id
-        		int intBuildItemID = 0;
-        		int intTestSessionID = 0;
+        		int intBuildItemID;
+        		int intTestSessionID;
 
         		String buildItemID = build.getEnvironment(listener).get("ItemID", "");
         		// Convert the string Item ID to an integer for comparison...
@@ -742,7 +740,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 		        			{
 		        				buildItemID = wit.next().getField("ID").getValueAsString();
 		    	        		try { intBuildItemID = Integer.parseInt(buildItemID); }
-		    	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }			        				
+		    	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }
 		        			}
 		        			else
 		        			{
@@ -759,13 +757,13 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	        		else
 	        		{
 	        			listener.getLogger().println("WARNING: No configuration information provided to locate an Integrity Build Item!");
-	        		}	        			
+	        		}
         		}
-        		
+
         		// Figure out if we need to do anything with the Test Results of this build...
         		AbstractTestResultAction<?> testResult = build.getAction(AbstractTestResultAction.class);
         		if( null != testResult && testResult.getTotalCount() > 0 )
-        		{	        			
+        		{
 	        		// Figure out if we need to interrogate the Build item for the Test Session item
 	        		if( intTestSessionID <= 0 && testSessionField.length() > 0 && intBuildItemID > 0 )
 	        		{
@@ -781,11 +779,11 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	        				if( null != testSessionFld && null != testSessionFld.getList() )
 	        				{
 	        					@SuppressWarnings("unchecked")
-	        					List<Item> sessionList = testSessionFld.getList(); 
+	        					List<Item> sessionList = testSessionFld.getList();
 	        					for( Item session : sessionList  )
 	        					{
 	        						// Look for the first Test Session in an Active state...
-	        						Field stateField = null;
+	        						Field stateField;
 	        						try
 	        						{
 	        							// This should work on a 10.5 and prior...
@@ -796,19 +794,19 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	        							// 10.6 and beyond...
 	        							stateField = walkResponse.getWorkItem(session.getId()).getField(testSessionStateField);
 	        						}
-	        						
+
         							if( null != stateField && testSessionActiveState.equals(stateField.getValueAsString()) )
         							{
         								testSessionID = session.getId();
         								try { intTestSessionID = Integer.parseInt(testSessionID); }
-        								catch( NumberFormatException nfe ){ intTestSessionID = 0; }		        							
+        								catch( NumberFormatException nfe ){ intTestSessionID = 0; }
         								break;
-        							}	        						
+        							}
 	        					}
 	        				}
-	        			}	        			
+	        			}
 	        		}
-	        		
+
 	        		// Update the Test Session with the results from the JUnit tests, if we got a Test Session to work with...
 	        		if( intTestSessionID > 0 )
 	        		{
@@ -817,20 +815,20 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	        			listener.getLogger().println("Updated Integrity Test Session Item '" + testSessionID + "' with results from automated test execution!");
 	        		}
         		}
-        		
+
         		// Finally, lets update the status of the build, if appropriate
         		if( intBuildItemID > 0 )
         		{
-        			listener.getLogger().println("Obtained Integrity Build Item '" + buildItemID + "' from build environment!");	        			
+        			listener.getLogger().println("Obtained Integrity Build Item '" + buildItemID + "' from build environment!");
         			success = editBuildItem(build, listener, api, buildItemID);
         		}
-        		
+
         	}
         	catch(APIException aex)
         	{
             	Logger.error("API Exception caught...");
             	ExceptionHandler eh = new ExceptionHandler(aex);
-	        	aex.printStackTrace(listener.fatalError(aex.getMessage()));            	
+	        	aex.printStackTrace(listener.fatalError(aex.getMessage()));
             	Logger.error(eh.getMessage());
             	Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
             	return false;
@@ -838,7 +836,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
         	finally
         	{
         		api.Terminate();
-        	}			
+        	}
 		}
 		else
 		{

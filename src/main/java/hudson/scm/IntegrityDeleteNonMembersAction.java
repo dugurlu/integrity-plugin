@@ -57,7 +57,7 @@ public class IntegrityDeleteNonMembersAction extends Notifier implements Seriali
         }
 
         IntegritySCM scm = IntegritySCM.class.cast(rootProject.getScm());
-        IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(build, listener,  scm.getAlternateWorkspace(), scm.getIntegrityProject());
+        IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(build, listener,  scm.getAlternateWorkspaceFilePath(), scm.getIntegrityProject());
         if (!build.getWorkspace().act(deleteNonMembers))
         {
             return false;

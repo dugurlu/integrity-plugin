@@ -94,7 +94,9 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     	// Log the construction
         Logger.debug("IntegritySCM constructor has been invoked!");
         // Initialize the class variables
-        this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
+        // This won't work with workflow, as no request is being process at this point.
+        // this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
+        this.ciServerURL = Jenkins.getInstance().getRootUrl();
         this.browser = browser;
         setIntegrationPointHost(integrationPointHost);
         setHost(host);
@@ -280,6 +282,10 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     public String getAlternateWorkspace()
     {
     	return alternateWorkspace;
+    }
+
+    public FilePath getAlternateWorkspaceFilePath() {
+        return new FilePath(new File(alternateWorkspace));
     }
 
     /**

@@ -493,7 +493,7 @@ public class IntegrityCMProject implements Serializable
 	 * Compares this version of the project to a previous/new version to determine what are the updates and what was deleted
 	 * @param baselineProjectDB The previous baseline (build) for this Integrity CM Project
 	 * @param api The current Integrity API Session to obtain the author information
-	 * @param return The total number of changes found in the comparison
+	 * @return The total number of changes found in the comparison
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
