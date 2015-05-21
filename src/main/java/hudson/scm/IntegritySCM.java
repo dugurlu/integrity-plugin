@@ -680,8 +680,8 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	 * @see hudson.scm.SCM#checkout(hudson.model.AbstractBuild, hudson.Launcher, hudson.FilePath, hudson.model.BuildListener, java.io.File)
 	 */
 	@Override
-	public void checkout(Run<?, ?> run, Launcher launcher, FilePath workspace,
-							TaskListener listener, File changeLogFile, SCMRevisionState baseline) throws IOException, InterruptedException
+	public void checkout(@Nonnull Run<?, ?> run, @Nonnull Launcher launcher, @Nonnull FilePath workspace,
+							@Nonnull TaskListener listener, File changeLogFile, SCMRevisionState baseline) throws IOException, InterruptedException
 	{
 		// Log the invocation... 
 		Logger.debug("Start execution of checkout() routine...!");
@@ -703,7 +703,11 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		}
 		// Lets also open the change log file for writing...
 		// Override file.encoding property so that we write as UTF-8 and do not have problems with special characters
-		PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile),"UTF-8"));
+		PrintWriter writer = null;
+        if(null != changeLogFile)
+        {
+            writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile),"UTF-8"));
+        }
 		try
 		{
 			// Next, load up the information for this Integrity Project's configuration
@@ -798,7 +802,9 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 				if( fetchChangedWorkspaceFiles ){ siProject.updateChecksum(coTask.getChecksumUpdates()); }
 				// Write out the change log file, which will be used by the parser to report the updates
 				listener.getLogger().println("Writing build change log...");
-				writer.println(siProject.getChangeLog(String.valueOf(run.getNumber()), projectMembersList));
+				if( null != writer) {
+                    writer.println(siProject.getChangeLog(String.valueOf(run.getNumber()), projectMembersList));
+                }
 				listener.getLogger().println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
 				// Delete non-members in this workspace, if appropriate...
 				if( deleteNonMembers )
@@ -838,7 +844,10 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		}
 	    finally
 	    {
-            writer.close();
+            if (null != writer)
+            {
+                writer.close();
+            }
             if( getIntegrityProject() != null )
 			{
 	    		getIntegrityProject().closeProjectDB();
