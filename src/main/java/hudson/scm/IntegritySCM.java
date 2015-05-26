@@ -3,11 +3,7 @@ package hudson.scm;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.BuildListener;
-import hudson.model.ModelObject;
-import hudson.model.TaskListener;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
+import hudson.model.*;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.FormValidation;
@@ -31,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.sql.ConnectionPoolDataSource;
 
@@ -99,7 +96,9 @@ public class IntegritySCM extends SCM implements Serializable
     	// Log the construction
     	LOGGER.fine("IntegritySCM constructor has been invoked!");
 		// Initialize the class variables
-    	this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
+		// getRootUrlFromRequest won't work within a workflow, so we have to replace it with the less reliable getRootUrl
+    	// this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
+		this.ciServerURL = Jenkins.getInstance().getRootUrl();
     	this.browser = browser;
     	this.serverConfig = serverConfig;
     	if( null != userName && userName.length() > 0 )
@@ -297,6 +296,11 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	return alternateWorkspace;
     }
+
+	public FilePath getAlternateWorkspaceFilePath()
+	{
+		return new FilePath(new File(getAlternateWorkspace()));
+	}
 
     /**
      * Returns the true/false depending on whether or not to synchronize changed workspace files
@@ -546,18 +550,18 @@ public class IntegritySCM extends SCM implements Serializable
 	 * @see hudson.scm.SCM#calcRevisionsFromBuild(hudson.model.AbstractBuild, hudson.Launcher, hudson.model.TaskListener)
 	 */
 	@Override
-	public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener) throws IOException, InterruptedException 
+	public SCMRevisionState calcRevisionsFromBuild(@Nonnull Run<?, ?> run, FilePath workspace, Launcher launcher, @Nonnull TaskListener listener) throws IOException, InterruptedException
 	{
 		// Log the call for debug purposes
 		LOGGER.fine("calcRevisionsFromBuild() invoked...!");
 		// Get the project cache table name for this build
 		String projectCacheTable = null;
-		String jobName = ((AbstractProject<?,?>)build.getProject()).getName();
+		String jobName = run.getParent().getName();
 		
 		try
 		{
 			projectCacheTable = DerbyUtils.getProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), 
-																jobName, configurationName, build.getNumber());
+																jobName, configurationName, run.getNumber());
 		}
 		catch (SQLException sqlex)
 		{
@@ -685,18 +689,18 @@ public class IntegritySCM extends SCM implements Serializable
 	 * @see hudson.scm.SCM#checkout(hudson.model.AbstractBuild, hudson.Launcher, hudson.FilePath, hudson.model.BuildListener, java.io.File)
 	 */
 	@Override
-	public boolean checkout(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, 
-							BuildListener listener, File changeLogFile) throws IOException, InterruptedException 
+	public void checkout(Run<?, ?> run, Launcher launcher, FilePath workspace,
+							TaskListener listener, File changeLogFile, SCMRevisionState baseline) throws IOException, InterruptedException
 	{
 		// Log the invocation... 
 		LOGGER.fine("Start execution of checkout() routine...!");
 		
 		// Re-evaluate the config path to resolve any groovy expressions...
-		String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), configPath);
+		String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), configPath);
 		
 		// Provide links to the Change and Build logs for easy access from Integrity
-		listener.getLogger().println("Change Log: " + ciServerURL + build.getUrl() + "changes");
-		listener.getLogger().println("Build Log: " + ciServerURL + build.getUrl() + "console");
+		listener.getLogger().println("Change Log: " + ciServerURL + run.getUrl() + "changes");
+		listener.getLogger().println("Build Log: " + ciServerURL + run.getUrl() + "console");
 		
 		// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
 		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
@@ -708,16 +712,20 @@ public class IntegritySCM extends SCM implements Serializable
 		if( null == api )
 		{
 			listener.getLogger().println("Failed to establish an API connection to the Integrity Server!");
-			return false;
+			return;
 		}
 		// Lets also open the change log file for writing...
 		// Override file.encoding property so that we write as UTF-8 and do not have problems with special characters
-		PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile),"UTF-8"));
+		PrintWriter writer = null;
+		if( null != changeLogFile)
+		{
+			writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile),"UTF-8"));
+		}
 		try
 		{
 			// Register the project cache for this build
 			String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), 
-															((AbstractProject<?,?>)build.getProject()).getName(), configurationName, build.getNumber());			
+															run.getParent().getName(), configurationName, run.getNumber());
 			
 			// Next, load up the information for this Integrity Project's configuration
 			listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
@@ -731,7 +739,7 @@ public class IntegritySCM extends SCM implements Serializable
 				{
 					// Execute a pre-build checkpoint...
     				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
-    				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), checkpointLabel));
+    				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), checkpointLabel));
     				LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());        					
 					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
 					String chkpt = wi.getResult().getField("resultant").getItem().getId();
@@ -753,13 +761,13 @@ public class IntegritySCM extends SCM implements Serializable
 			initializeCMProjectMembers(api);
 					
 	    	// Now, we need to find the project state from the previous build.
-			AbstractBuild<?,?> previousBuild = build.getPreviousBuild();
+			Run<?,?> previousBuild = run.getPreviousBuild();
 			String prevProjectCache = null;
 	        while( null != previousBuild )
 	        {
 	        	// Go back through each previous build to find a useful project state
 	        	prevProjectCache = DerbyUtils.getProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), 
-	        											((AbstractProject<?,?>)build.getProject()).getName(), configurationName, previousBuild.getNumber());
+	        											run.getParent().getName(), configurationName, previousBuild.getNumber());
 	            if( null != prevProjectCache && prevProjectCache.length() > 0 ) 
 	            {
 	            	LOGGER.fine("Found previous project state in build " + previousBuild.getNumber());
@@ -811,22 +819,26 @@ public class IntegritySCM extends SCM implements Serializable
 				if( fetchChangedWorkspaceFiles ){ DerbyUtils.updateChecksum(projectCacheTable, coTask.getChecksumUpdates()); }
 				// Write out the change log file, which will be used by the parser to report the updates
 				listener.getLogger().println("Writing build change log...");
-				writer.println(siProject.getChangeLog(String.valueOf(build.getNumber()), projectMembersList));				
-				listener.getLogger().println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
+
+				if(null != changeLogFile)
+				{
+					writer.println(siProject.getChangeLog(String.valueOf(run.getNumber()), projectMembersList));
+					listener.getLogger().println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
+				}
 				// Delete non-members in this workspace, if appropriate...
 				if( deleteNonMembers )
 				{
-				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(build, listener, alternateWorkspace, getIntegrityProject());
+				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(run, listener, workspace, getIntegrityProject());
 				    if( ! workspace.act(deleteNonMembers) )
 					{
-				        return false;
+				        return;
 				    }
 				}
 			}
 			else
 			{
 				// Checkout failed!  Returning false...
-				return false;
+				return;
 			}
 		}
 	    catch(APIException aex)
@@ -839,7 +851,7 @@ public class IntegritySCM extends SCM implements Serializable
     		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		
-    		return false;
+    		return;
 	    }
 		catch(SQLException sqlex)
 		{
@@ -847,7 +859,7 @@ public class IntegritySCM extends SCM implements Serializable
     		listener.getLogger().println("A SQL Exception was caught!"); 
     		listener.getLogger().println(sqlex.getMessage());
     		LOGGER.log(Level.SEVERE, "SQLException", sqlex);
-    		return false;			
+    		return;
 		}
 	    finally
 	    {
@@ -857,9 +869,7 @@ public class IntegritySCM extends SCM implements Serializable
 	        }
 	    	api.Terminate();
 	    }
-
 	    //If we got here, everything is good on the checkout...
-	    return true;
 	}
 	
 
@@ -871,8 +881,8 @@ public class IntegritySCM extends SCM implements Serializable
 	 * @see hudson.scm.SCM#compareRemoteRevisionWith(hudson.model.AbstractProject, hudson.Launcher, hudson.FilePath, hudson.model.TaskListener, hudson.scm.SCMRevisionState)
 	 */
 	@Override
-	protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
-													final TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException	
+	public PollingResult compareRemoteRevisionWith(@Nonnull Job<?, ?> job, Launcher launcher, FilePath workspace,
+													@Nonnull final TaskListener listener, @Nonnull SCMRevisionState _baseline) throws IOException, InterruptedException
 	{
 		// Log the call for now...
 		LOGGER.fine("compareRemoteRevisionWith() invoked...!");
@@ -883,7 +893,7 @@ public class IntegritySCM extends SCM implements Serializable
         {
         	baseline = (IntegrityRevisionState)_baseline;
         	// Get the baseline that contains the last build
-        	AbstractBuild<?,?> lastBuild = project.getLastBuild();
+        	Run<?,?> lastBuild = job.getLastBuild();
         	if( null == lastBuild )
         	{
         		// We've got no previous builds, build now!
@@ -893,7 +903,7 @@ public class IntegritySCM extends SCM implements Serializable
         	else
         	{
         		// Lets trying to get the baseline associated with the last build
-        		baseline = (IntegrityRevisionState)calcRevisionsFromBuild(lastBuild, launcher, listener);
+        		baseline = (IntegrityRevisionState)calcRevisionsFromBuild(lastBuild, workspace, launcher, listener);
         		if( null != baseline && null != baseline.getProjectCache() )
         		{
         			// Next, load up the information for the current Integrity Project
@@ -907,9 +917,9 @@ public class IntegritySCM extends SCM implements Serializable
 	        			try
 	        			{
 	        				// Get the project cache table name
-	        				String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), project.getName(), configurationName, 0);				        				
+	        				String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), job.getName(), configurationName, 0);
 	        				// Re-evaluate the config path to resolve any groovy expressions...
-	        				String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(project.getCharacteristicEnvVars(), configPath);
+	        				String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(job.getCharacteristicEnvVars(), configPath);
 	        				listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
 	        				initializeCMProject(api, projectCacheTable, resolvedConfigPath);
 	        				listener.getLogger().println("Preparing to execute si viewproject for " + resolvedConfigPath);
