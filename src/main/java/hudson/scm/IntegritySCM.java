@@ -741,7 +741,7 @@ public class IntegritySCM extends SCM implements Serializable
 		// Provide links to the Change and Build logs for easy access from Integrity
 		listener.getLogger().println("Change Log: " + ciServerURL + run.getUrl() + "changes");
 		listener.getLogger().println("Build Log: " + ciServerURL + run.getUrl() + "console");
-		
+
 		// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
 		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
 		IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
@@ -950,13 +950,21 @@ public class IntegritySCM extends SCM implements Serializable
         			// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
         			IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
         			IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
-        																			desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());		        			
-        			APISession api = APISession.create(coSettings);	
+        																			desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());
+
+					listener.getLogger().println("Polling with include/exclude filters: " + pollingIncludeList + " / " + pollingExcludeList);
+//					listener.getLogger().println("Accept member 'foo.txt': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.txt"));
+//					listener.getLogger().println("Accept member 'foo.doc': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.doc"));
+//					listener.getLogger().println("Accept member 'foo.c': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.c"));
+//					listener.getLogger().println("Accept member 'foo.cpp': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.cpp"));
+//					listener.getLogger().println("Accept member 'foo.docx': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.docx"));
+
+
+					APISession api = APISession.create(coSettings);
         			if( null != api )
         			{
 	        			try
 	        			{
-							// TODO: add filter functionality for polling here
 	        				// Get the project cache table name
 	        				String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), job.getName(), configurationName, 0);
 	        				// Re-evaluate the config path to resolve any groovy expressions...
@@ -967,7 +975,7 @@ public class IntegritySCM extends SCM implements Serializable
 	        				initializeCMProjectMembers(api);
 
 	        				// Compare this project with the old project 
-	        				int changeCount = DerbyUtils.compareBaseline(baseline.getProjectCache(), projectCacheTable, skipAuthorInfo, api);		
+	        				int changeCount = DerbyUtils.compareBaseline(baseline.getProjectCache(), projectCacheTable, skipAuthorInfo, api, pollingIncludeList, pollingExcludeList);
 	        				// Finally decide whether or not we need to build again
 	        				if( changeCount > 0 )
 	        				{
