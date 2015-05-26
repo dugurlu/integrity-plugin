@@ -1,6 +1,7 @@
 package hudson.scm;
 
 import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLogPath;
 
@@ -34,7 +35,7 @@ public class IntegrityChangeLogParser extends ChangeLogParser
 	 * @see hudson.scm.ChangeLogParser#parse(hudson.model.AbstractBuild, java.io.File)
 	 */
 	@Override
-	public IntegrityChangeLogSet parse(@SuppressWarnings("rawtypes") AbstractBuild build, File changeLogFile) throws IOException, SAXException 
+	public IntegrityChangeLogSet parse(Run build, RepositoryBrowser<?> browser, File changeLogFile) throws IOException, SAXException
 	{
 		List<IntegrityChangeLog> changeSetList = new ArrayList<IntegrityChangeLog>();
 		Digester digester = new Digester();

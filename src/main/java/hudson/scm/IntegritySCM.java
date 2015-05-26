@@ -949,8 +949,8 @@ public class IntegritySCM extends SCM implements Serializable
         			// Next, load up the information for the current Integrity Project
         			// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
         			IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
-        			IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
-        																			desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());
+					IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(),
+							desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());
 
 					listener.getLogger().println("Polling with include/exclude filters: " + pollingIncludeList + " / " + pollingExcludeList);
 //					listener.getLogger().println("Accept member 'foo.txt': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.txt"));
