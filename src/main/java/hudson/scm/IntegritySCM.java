@@ -70,6 +70,8 @@ public class IntegritySCM extends SCM implements Serializable
 	private String configPath;
 	private String includeList;
 	private String excludeList;
+	private String pollingIncludeList;
+	private String pollingExcludeList;
 	private String checkpointLabel;
 	private String configurationName;
 	private boolean cleanCopy;
@@ -91,7 +93,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public IntegritySCM(IntegrityRepositoryBrowser browser, String serverConfig, String userName, String password, String configPath, 
 						String includeList, String excludeList, boolean cleanCopy, String lineTerminator, boolean restoreTimestamp, 
 						boolean skipAuthorInfo, boolean checkpointBeforeBuild, String checkpointLabel, String alternateWorkspace, 
-						boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName)
+						boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName, String pollingIncludeList, String pollingExcludeList)
 	{
     	// Log the construction
     	LOGGER.fine("IntegritySCM constructor has been invoked!");
@@ -132,6 +134,8 @@ public class IntegritySCM extends SCM implements Serializable
     	this.deleteNonMembers = deleteNonMembers;
 		this.checkoutThreadPoolSize = (checkoutThreadPoolSize > 0 ? checkoutThreadPoolSize : DEFAULT_THREAD_POOL_SIZE);
 		this.configurationName = configurationName;
+		this.pollingIncludeList = pollingIncludeList;
+		this.pollingExcludeList = pollingExcludeList;
 
     	// Initialize the Integrity URL
     	initIntegrityURL();    	
@@ -220,6 +224,15 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	return includeList;
     }
+
+	/**
+	 * Returns the files that will be included in polling.
+	 * @return
+	 */
+	public String getPollingIncludeList()
+	{
+		return pollingIncludeList;
+	}
     
     /**
      * Returns the files that will be included
@@ -229,6 +242,15 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	return excludeList;
     }
+
+	/**
+	 * Returns the files that will be excluded from polling.
+	 * @return
+	 */
+	public String getPollingExcludeList()
+	{
+		return pollingExcludeList;
+	}
     
     /**
      * Returns true/false depending on whether or not the workspace is required to be cleaned
@@ -385,6 +407,15 @@ public class IntegritySCM extends SCM implements Serializable
     	this.includeList = includeList;
     }
 
+	/**
+	 * Sets the files that will be included while polling for changes.
+	 * @param pollingIncludeList
+	 */
+	public void setPollingIncludeList(String pollingIncludeList)
+	{
+		this.includeList = pollingIncludeList;
+	}
+
     /**
      * Sets the files that will be not be included
      * @return
@@ -393,6 +424,15 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	this.excludeList = excludeList;
     }
+
+	/**
+	 * Set the files that will not be included in polling.
+	 * @param pollingExcludeList
+	 */
+	public void setPollingExcludeList(String pollingExcludeList)
+	{
+		this.pollingExcludeList = pollingExcludeList;
+	}
 
     /**
      * Toggles whether or not the workspace is required to be cleaned
@@ -916,6 +956,7 @@ public class IntegritySCM extends SCM implements Serializable
         			{
 	        			try
 	        			{
+							// TODO: add filter functionality for polling here
 	        				// Get the project cache table name
 	        				String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), job.getName(), configurationName, 0);
 	        				// Re-evaluate the config path to resolve any groovy expressions...

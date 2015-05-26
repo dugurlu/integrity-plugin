@@ -33,7 +33,15 @@
 		<f:entry title="Exclude List" field="excludeList">
 			<f:textbox name="excludeList" value="${scm.excludeList}" />    
 		</f:entry>
-        
+
+		<f:entry title="Polling Exclude List" field="pollingExcludeList">
+			<f:textbox name="pollingExcludeList" value="${scm.pollingExcludeList}" />
+		</f:entry>
+
+        <f:entry title="Polling Include List" field="pollingIncludeList">
+			<f:textbox name="pollingIncludeList" value="${scm.pollingIncludeList}" />
+		</f:entry>
+
         <f:entry title="Restore Timestamp?" field="restoreTimestamp">
             <f:checkbox name="restoreTimestamp" checked="${scm.restoreTimestamp}"/>
         </f:entry>
