@@ -3,6 +3,7 @@ package hudson.scm;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
 import java.io.File;
@@ -24,9 +25,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.mks.api.response.APIException;
+import jenkins.SlaveToMasterFileCallable;
 
-public class IntegrityCheckoutTask implements FileCallable<Boolean> 
-{
+public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
+
 	private static final long serialVersionUID = 1240357991626897900L;
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	private static final int CHECKOUT_TRESHOLD = 500;	
@@ -37,7 +39,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	private final boolean cleanCopy;
 	private final String alternateWorkspaceDir;
 	private final boolean fetchChangedWorkspaceFiles;
-	private final BuildListener listener;
+	private final TaskListener listener;
 	private IntegrityConfigurable integrityConfig;
     // Checksum Hash
     private ConcurrentHashMap<String, String> checksumHash;
@@ -61,7 +63,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	 * @param listener The Hudson build listener
 	 */
 	public IntegrityCheckoutTask(List<Hashtable<CM_PROJECT, Object>> projectMembersList, List<String> dirList, String alternateWorkspaceDir, String lineTerminator, boolean restoreTimestamp,
-									boolean cleanCopy, boolean fetchChangedWorkspaceFiles,int checkoutThreadPoolSize, BuildListener listener, IntegrityConfigurable integrityConfig)
+									boolean cleanCopy, boolean fetchChangedWorkspaceFiles,int checkoutThreadPoolSize, TaskListener listener, IntegrityConfigurable integrityConfig)
 	{
 		this.projectMembersList = projectMembersList;
 		this.dirList = dirList;

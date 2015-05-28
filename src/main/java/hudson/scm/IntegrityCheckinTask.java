@@ -16,8 +16,9 @@ import com.mks.api.FileOption;
 import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
+import jenkins.SlaveToMasterFileCallable;
 
-public class IntegrityCheckinTask implements FileCallable<Boolean>
+public class IntegrityCheckinTask extends SlaveToMasterFileCallable<Boolean>
 {
 	private static final long serialVersionUID = 4165773747683187630L;
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");

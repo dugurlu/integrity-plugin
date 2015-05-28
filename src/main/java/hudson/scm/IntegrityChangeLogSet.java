@@ -1,6 +1,7 @@
 package hudson.scm;
 
 import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.model.User;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 
@@ -35,9 +36,9 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 	 * IntegrityChangeLogSet is a collection of all the changes for this build
 	 * @param build
 	 */
-	public IntegrityChangeLogSet(AbstractBuild<?, ?> build, List<IntegrityChangeLog> logs, String integrityURL) 
+	public IntegrityChangeLogSet(Run<?, ?> build, List<IntegrityChangeLog> logs, String integrityURL)
 	{
-		super(build);
+		super(build, null);
 		this.logs = Collections.unmodifiableList(logs);
 		this.url = integrityURL;
 		this.version = String.valueOf(build.getNumber());

@@ -2,10 +2,7 @@ package hudson.scm;
 
 import hudson.scm.IntegritySCM.DescriptorImpl;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
+import java.io.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -29,6 +26,7 @@ import java.util.logging.Logger;
 import javax.sql.ConnectionPoolDataSource;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource;
 
 import com.mks.api.response.APIException;
@@ -719,7 +717,7 @@ public class DerbyUtils
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
-	public static synchronized int compareBaseline(String baselineProjectCache, String projectCacheTable, boolean skipAuthorInfo, APISession api) throws SQLException, IOException
+	public static synchronized int compareBaseline(String baselineProjectCache, String projectCacheTable, boolean skipAuthorInfo, APISession api, String includeFilter, String excludeFilter) throws SQLException, IOException
 	{
 		// Re-initialize our return variable
 		int changeCount = 0;
@@ -745,16 +743,21 @@ public class DerbyUtils
 			while( baselineRS.next() )
 			{
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(baselineRS);
-				Hashtable<CM_PROJECT, Object> memberInfo = new Hashtable<CM_PROJECT, Object>();
-				memberInfo.put(CM_PROJECT.MEMBER_ID, (null == rowHash.get(CM_PROJECT.MEMBER_ID) ? "" : rowHash.get(CM_PROJECT.MEMBER_ID).toString()));
-				memberInfo.put(CM_PROJECT.TIMESTAMP, (null == rowHash.get(CM_PROJECT.TIMESTAMP) ? "" : (Date)rowHash.get(CM_PROJECT.TIMESTAMP)));
-				memberInfo.put(CM_PROJECT.DESCRIPTION, (null == rowHash.get(CM_PROJECT.DESCRIPTION) ? "" : rowHash.get(CM_PROJECT.DESCRIPTION).toString()));
-				memberInfo.put(CM_PROJECT.AUTHOR, (null == rowHash.get(CM_PROJECT.AUTHOR) ? "" : rowHash.get(CM_PROJECT.AUTHOR).toString()));
-				memberInfo.put(CM_PROJECT.CONFIG_PATH, (null == rowHash.get(CM_PROJECT.CONFIG_PATH) ? "" : rowHash.get(CM_PROJECT.CONFIG_PATH).toString()));
-				memberInfo.put(CM_PROJECT.REVISION, (null == rowHash.get(CM_PROJECT.REVISION) ? "" : rowHash.get(CM_PROJECT.REVISION).toString()));
-				memberInfo.put(CM_PROJECT.RELATIVE_FILE, (null == rowHash.get(CM_PROJECT.RELATIVE_FILE) ? "" : rowHash.get(CM_PROJECT.RELATIVE_FILE).toString()));
-				memberInfo.put(CM_PROJECT.CHECKSUM, (null == rowHash.get(CM_PROJECT.CHECKSUM) ? "" : rowHash.get(CM_PROJECT.CHECKSUM).toString()));
-				baselinePJ.put(rowHash.get(CM_PROJECT.NAME).toString(), memberInfo);
+				String memberName = rowHash.get(CM_PROJECT.NAME).toString();
+				boolean acceptMember = acceptMember(includeFilter, excludeFilter, memberName);
+
+				if(acceptMember) {
+					Hashtable<CM_PROJECT, Object> memberInfo = new Hashtable<CM_PROJECT, Object>();
+					memberInfo.put(CM_PROJECT.MEMBER_ID, (null == rowHash.get(CM_PROJECT.MEMBER_ID) ? "" : rowHash.get(CM_PROJECT.MEMBER_ID).toString()));
+					memberInfo.put(CM_PROJECT.TIMESTAMP, (null == rowHash.get(CM_PROJECT.TIMESTAMP) ? "" : (Date) rowHash.get(CM_PROJECT.TIMESTAMP)));
+					memberInfo.put(CM_PROJECT.DESCRIPTION, (null == rowHash.get(CM_PROJECT.DESCRIPTION) ? "" : rowHash.get(CM_PROJECT.DESCRIPTION).toString()));
+					memberInfo.put(CM_PROJECT.AUTHOR, (null == rowHash.get(CM_PROJECT.AUTHOR) ? "" : rowHash.get(CM_PROJECT.AUTHOR).toString()));
+					memberInfo.put(CM_PROJECT.CONFIG_PATH, (null == rowHash.get(CM_PROJECT.CONFIG_PATH) ? "" : rowHash.get(CM_PROJECT.CONFIG_PATH).toString()));
+					memberInfo.put(CM_PROJECT.REVISION, (null == rowHash.get(CM_PROJECT.REVISION) ? "" : rowHash.get(CM_PROJECT.REVISION).toString()));
+					memberInfo.put(CM_PROJECT.RELATIVE_FILE, (null == rowHash.get(CM_PROJECT.RELATIVE_FILE) ? "" : rowHash.get(CM_PROJECT.RELATIVE_FILE).toString()));
+					memberInfo.put(CM_PROJECT.CHECKSUM, (null == rowHash.get(CM_PROJECT.CHECKSUM) ? "" : rowHash.get(CM_PROJECT.CHECKSUM).toString()));
+					baselinePJ.put(rowHash.get(CM_PROJECT.NAME).toString(), memberInfo);
+				}
 			}
 			
 			// Create the select statement for the current project
@@ -771,6 +774,11 @@ public class DerbyUtils
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
 				// Obtain the member we're working with
 				String memberName = rowHash.get(CM_PROJECT.NAME).toString();
+				if (!acceptMember(includeFilter, excludeFilter, memberName)) {
+					LOGGER.fine("Skipping member '" + memberName + "' due to filter");
+					baselinePJ.remove(memberName);
+					continue;
+				}
 				// Get the baseline project information for this member
 				LOGGER.fine("Comparing file against baseline " + memberName);
 				Hashtable<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
@@ -877,7 +885,61 @@ public class DerbyUtils
 		}
 		
 		return changeCount;
-	}	
+	}
+
+	public static boolean acceptMember(String includeFilter, String excludeFilter, String memberName) {
+		LOGGER.fine("Applying polling filter");
+		if(null == includeFilter && null == excludeFilter)
+		{
+			return true;
+		}
+		RegexFileFilter includeRegexFilter;
+		RegexFileFilter excludeRegexFilter;
+
+		// if an include/exclude filter was specified, filter all members by their name
+		boolean acceptMember = true;
+
+		// handle exclude filter
+		if (null != excludeFilter && !excludeFilter.isEmpty()) {
+			// iterate over all possible filters (comma-separated)
+			String[] individualExcludes = excludeFilter.split(",");
+			for(String excludeString : individualExcludes) {
+				LOGGER.fine("Processing exclude filter: '" + excludeString + "' for member: '" + memberName + "'");
+				excludeRegexFilter = new RegexFileFilter(excludeString.trim());
+				// if the filter matches the member name, flag the member for exclusion
+				if (excludeRegexFilter.accept(null, memberName)) {
+					LOGGER.fine("Excluding member '" + memberName + "' through exclude filter!");
+					acceptMember = false;
+					break;
+				}
+			}
+		}
+
+		// handle include filter
+		if (null != includeFilter && !includeFilter.isEmpty()) {
+            // iterate over all possible filters (comma-separated)
+            String[] individualIncludes = includeFilter.split(",");
+            for(String includeString: individualIncludes)
+            {
+                LOGGER.fine("Processing include filter: '" + includeString + "' for member: '" + memberName + "'");
+                includeRegexFilter = new RegexFileFilter(includeString.trim());
+                // if the filter matches the member name, flag the member for inclusion
+                if (!includeRegexFilter.accept(null, memberName)) {
+                    LOGGER.fine("Including member '" + memberName + "' through include filter!");
+                    acceptMember = false;
+                    break;
+                }
+            }
+        }
+
+
+		return acceptMember;
+	}
+
+	public static synchronized int compareBaseline(String baselineProjectCache, String projectCacheTable, boolean skipAuthorInfo, APISession api) throws SQLException, IOException
+	{
+		return compareBaseline(baselineProjectCache, projectCacheTable, skipAuthorInfo, api, null, null);
+	}
 	
 	/**
 	 * Parses the output from the si viewproject command to get a list of members
@@ -965,9 +1027,9 @@ public class DerbyUtils
 						// Save this member entry
 						String memberName = wi.getField("name").getValueAsString();
 						// Figure out the full member path
-						LOGGER.fine("Member context: " + wi.getContext());
-						LOGGER.fine("Member parent: " + parentProject);
-						LOGGER.fine("Member name: " + memberName);
+//						LOGGER.fine("Member context: " + wi.getContext());
+//						LOGGER.fine("Member parent: " + parentProject);
+//						LOGGER.fine("Member name: " + memberName);
 						
 						// Process this member only if we can figure out where to put it in the workspace
 						if( memberName.startsWith(projectRoot) )

@@ -4,4 +4,4 @@ project.pj
 release.txt
 executeBuild.js
 .idea/
-.iml
+*.iml

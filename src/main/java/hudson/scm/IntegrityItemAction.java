@@ -21,10 +21,12 @@ import hudson.Launcher;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
-import hudson.tasks.test.TestResult;
+
+import hudson.tasks.junit.CaseResult;
+import hudson.tasks.junit.TestResult;
 import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction;
-import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
+
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 
@@ -544,7 +546,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 				String testCaseID = testCaseIDFld.getValueAsString();
 				String junitTestName = getJUnitID(testCaseID);
 				LOGGER.fine("Looking for external test " + testCaseID + " internal JUnit ID " + junitTestName);
-				TestResult caseResult = testResult.findCorrespondingResult(junitTestName);
+				TestResult caseResult = (TestResult)testResult.findCorrespondingResult(junitTestName);
 				// Update Integrity only if we find a matching Test Case Result
 				if( null != caseResult )
 				{
@@ -576,8 +578,8 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	 */
 	private TestResult getTestResult(AggregatedTestResultAction testResultAction)
 	{
-		List<ChildReport> cList = testResultAction.getChildReports();
-        for (ChildReport childReport : cList) 
+		List<AggregatedTestResultAction.ChildReport> cList = testResultAction.getChildReports();
+        for (AggregatedTestResultAction.ChildReport childReport : cList)
         {
             if (childReport.result instanceof TestResult) 
             {
@@ -587,10 +589,8 @@ public class IntegrityItemAction extends Notifier implements Serializable
         		LOGGER.fine("Total failed count: " + testResult.getFailCount());
         		LOGGER.fine("Total skipped count: " + testResult.getSkipCount());
         		LOGGER.fine("Failed Test Details:");
-        		Iterator<? extends TestResult> failedResultIterator = testResult.getFailedTests().iterator();
-        		while( failedResultIterator.hasNext() )
-        		{
-        			TestResult caseResult = failedResultIterator.next();
+        		for(CaseResult caseResult : testResult.getFailedTests())
+				{
         			LOGGER.fine("ID: " + caseResult.getId() + " " + caseResult.getErrorDetails());	
         		}
             	
