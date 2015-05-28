@@ -34,6 +34,7 @@ import javax.sql.ConnectionPoolDataSource;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
+import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -1356,11 +1357,36 @@ public class IntegritySCM extends SCM implements Serializable
             }
             catch(NumberFormatException nfe)
             {
-                return FormValidation.error("Value must be numeric!");
-            }
-            
+				return FormValidation.error("Value must be numeric!");
+			}
+
             // Validation was successful if we got here, so we'll return all good!
             return FormValidation.ok();
-        }        		
-    }
+        }
+
+		public FormValidation doCheckPollingExcludeList(@QueryParameter String value)
+		{
+			// does this check for null make sense?
+			if (null == value || value.isEmpty()) {
+				return FormValidation.ok();
+			}
+			// check whether regex file filters can be created from the string value
+			RegexFileFilter rff;
+			for (String filter : value.split(",")) {
+				try {
+					rff = new RegexFileFilter(filter.trim());
+					rff.accept(null, "foo.bar");
+				} catch (Exception e)
+				{
+					return FormValidation.error("Check for a valid regular expression failed. " + e.getMessage());
+				}
+			}
+					return FormValidation.ok();
+
+		}
+
+		public FormValidation doCheckPollingIncludeList(@QueryParameter String value) {
+			return doCheckPollingExcludeList(value);
+		}
+	}
 }

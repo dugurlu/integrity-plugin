@@ -721,8 +721,6 @@ public class DerbyUtils
 	{
 		// Re-initialize our return variable
 		int changeCount = 0;
-		RegexFileFilter includeRegexFilter;
-		RegexFileFilter excludeRegexFilter;
 		
 		Connection db = null;
 		Statement baselineSelect = null;
@@ -890,14 +888,35 @@ public class DerbyUtils
 	}
 
 	public static boolean acceptMember(String includeFilter, String excludeFilter, String memberName) {
+		LOGGER.fine("Applying polling filter");
+		if(null == includeFilter && null == excludeFilter)
+		{
+			return true;
+		}
 		RegexFileFilter includeRegexFilter;
 		RegexFileFilter excludeRegexFilter;
 
 		// if an include/exclude filter was specified, filter all members by their name
-		boolean acceptMember = false;
+		boolean acceptMember = true;
+
+		// handle exclude filter
+		if (null != excludeFilter && !excludeFilter.isEmpty()) {
+			// iterate over all possible filters (comma-separated)
+			String[] individualExcludes = excludeFilter.split(",");
+			for(String excludeString : individualExcludes) {
+				LOGGER.fine("Processing exclude filter: '" + excludeString + "' for member: '" + memberName + "'");
+				excludeRegexFilter = new RegexFileFilter(excludeString.trim());
+				// if the filter matches the member name, flag the member for exclusion
+				if (excludeRegexFilter.accept(null, memberName)) {
+					LOGGER.fine("Excluding member '" + memberName + "' through exclude filter!");
+					acceptMember = false;
+					break;
+				}
+			}
+		}
 
 		// handle include filter
-		if (includeFilter != null) {
+		if (null != includeFilter && !includeFilter.isEmpty()) {
             // iterate over all possible filters (comma-separated)
             String[] individualIncludes = includeFilter.split(",");
             for(String includeString: individualIncludes)
@@ -905,29 +924,15 @@ public class DerbyUtils
                 LOGGER.fine("Processing include filter: '" + includeString + "' for member: '" + memberName + "'");
                 includeRegexFilter = new RegexFileFilter(includeString.trim());
                 // if the filter matches the member name, flag the member for inclusion
-                if (includeRegexFilter.accept(null, memberName)) {
+                if (!includeRegexFilter.accept(null, memberName)) {
                     LOGGER.fine("Including member '" + memberName + "' through include filter!");
-                    acceptMember = true;
-                    break;
-                }
-            }
-        }
-
-		// handle exclude filter
-		if (null != excludeFilter) {
-            // iterate over all possible filters (comma-separated)
-            String[] individualExcludes = excludeFilter.split(",");
-            for(String excludeString : individualExcludes) {
-                LOGGER.fine("Processing exclude filter: '" + excludeString + "' for member: '" + memberName + "'");
-                excludeRegexFilter = new RegexFileFilter(excludeString.trim());
-                // if the filter matches the member name, flag the member for exclusion
-                if (excludeRegexFilter.accept(null, memberName)) {
-                    LOGGER.fine("Excluding member '" + memberName + "' through exclude filter!");
                     acceptMember = false;
                     break;
                 }
             }
         }
+
+
 		return acceptMember;
 	}
 
@@ -1022,9 +1027,9 @@ public class DerbyUtils
 						// Save this member entry
 						String memberName = wi.getField("name").getValueAsString();
 						// Figure out the full member path
-						LOGGER.fine("Member context: " + wi.getContext());
-						LOGGER.fine("Member parent: " + parentProject);
-						LOGGER.fine("Member name: " + memberName);
+//						LOGGER.fine("Member context: " + wi.getContext());
+//						LOGGER.fine("Member parent: " + parentProject);
+//						LOGGER.fine("Member name: " + memberName);
 						
 						// Process this member only if we can figure out where to put it in the workspace
 						if( memberName.startsWith(projectRoot) )
