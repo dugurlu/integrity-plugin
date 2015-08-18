@@ -1388,5 +1388,10 @@ public class IntegritySCM extends SCM implements Serializable
 		public FormValidation doCheckPollingIncludeList(@QueryParameter String value) {
 			return doCheckPollingExcludeList(value);
 		}
+
+		@Override
+		public boolean isApplicable(Job job) {
+			return true;
+		}
 	}
 }
