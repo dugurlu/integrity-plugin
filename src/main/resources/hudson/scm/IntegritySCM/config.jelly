@@ -5,11 +5,11 @@
 	</f:entry>
 
 	<f:invisibleEntry title="Configuration Name" field="configurationName">
-		<input class="setting-input" name="configurationName" type="hidden" value="${h.ifThenElse(scm.configurationName==null,descriptor.configurationName,scm.configurationName)}" />         
+		<input class="setting-input" name="configurationName" type="hidden" value="${h.ifThenElse(scm.configurationName==null,descriptor.configurationName,scm.configurationName)}" />
 	</f:invisibleEntry>
-	
+
 	<f:entry title="Integrity Project" field="configPath">
-		<f:textbox name="configPath" value="${scm.configPath}" clazz="required" checkMessage="'Integrity Project' is a required field!" />        
+		<f:textbox name="configPath" value="${scm.configPath}" clazz="required" checkMessage="'Integrity Project' is a required field!" />
 	</f:entry>
 
 	<f:entry title="Clean Workspace?" field="cleanCopy">
@@ -17,21 +17,25 @@
 	</f:entry>
 
     <f:advanced>
-        
-		<f:entry title="Project Specific Username" field="userName">
-			<f:textbox name="userName" value="${scm.userName}" />        
+
+		<f:entry title="Skip checkout?" field="skipCheckout">
+			<f:checkbox name="skipCheckout" value="${scm.skipCheckout}" />
 		</f:entry>
-	        
-		<f:entry title="Project Specific Password" field="password">        
+
+		<f:entry title="Project Specific Username" field="userName">
+			<f:textbox name="userName" value="${scm.userName}" />
+		</f:entry>
+
+		<f:entry title="Project Specific Password" field="password">
 			<f:password name="password" value="${scm.password}" />
 		</f:entry>
-		        
+
 		<f:entry title="Include List" field="includeList">
 			<f:textbox name="includeList" value="${scm.includeList}" />
-		</f:entry>       
+		</f:entry>
 
 		<f:entry title="Exclude List" field="excludeList">
-			<f:textbox name="excludeList" value="${scm.excludeList}" />    
+			<f:textbox name="excludeList" value="${scm.excludeList}" />
 		</f:entry>
 
 		<f:entry title="Polling Exclude List" field="pollingExcludeList">
@@ -45,7 +49,7 @@
         <f:entry title="Restore Timestamp?" field="restoreTimestamp">
             <f:checkbox name="restoreTimestamp" checked="${scm.restoreTimestamp}"/>
         </f:entry>
-        
+
         <f:entry title="Line Terminator" field="lineTerminator">
           <select name="lineTerminator">
 			<f:option value="native" selected="${h.ifThenElse(scm.lineTerminator=='native',true,false)}">native</f:option>
@@ -58,34 +62,34 @@
         <f:entry title="Omit Author in Change Log?" field="skipAuthorInfo">
             <f:checkbox name="skipAuthorInfo" checked="${scm.skipAuthorInfo}"/>
         </f:entry>
-        
+
         <f:entry title="Checkpoint Before Build?" field="checkpointBeforeBuild">
             <f:checkbox name="checkpointBeforeBuild" checked="${scm.checkpointBeforeBuild}"/>
         </f:entry>
-        
+
 		<f:entry title="Checkpoint Label" field="checkpointLabel">
-    		<f:textbox name="checkpointLabel" value="${h.ifThenElse(scm.checkpointLabel==null,descriptor.checkpointLabel,scm.checkpointLabel)}" 
+    		<f:textbox name="checkpointLabel" value="${h.ifThenElse(scm.checkpointLabel==null,descriptor.checkpointLabel,scm.checkpointLabel)}"
     			checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/checkpointLabelCheck?value='+escape(this.value)" />
   		</f:entry>
-        
+
         <f:entry title="Alternate Workspace Directory" field="alternateWorkspace">
             <f:textbox name="alternateWorkspace" value="${scm.alternateWorkspace}"/>
         </f:entry>
-        
+
         <f:entry title="Synchronize Changed Workspace Files" field="fetchChangedWorkspaceFiles">
             <f:checkbox name="fetchChangedWorkspaceFiles" checked="${scm.fetchChangedWorkspaceFiles}"/>
-        </f:entry>        
-        
+        </f:entry>
+
         <f:entry title="Delete Non Members" field="deleteNonMembers">
             <f:checkbox name="deleteNonMembers" checked="${scm.deleteNonMembers}"/>
-        </f:entry>                   
-  
-        <f:entry title="Checkout Thread Pool Size" field="checkoutThreadPoolSize"> 		    	
-        	<f:textbox name="checkoutThreadPoolSize" value="${h.ifThenElse(scm.checkoutThreadPoolSize==null,descriptor.checkoutThreadPoolSize,scm.checkoutThreadPoolSize)}" 
+        </f:entry>
+
+        <f:entry title="Checkout Thread Pool Size" field="checkoutThreadPoolSize">
+        	<f:textbox name="checkoutThreadPoolSize" value="${h.ifThenElse(scm.checkoutThreadPoolSize==null,descriptor.checkoutThreadPoolSize,scm.checkoutThreadPoolSize)}"
         		checkUrl="'${rootURL}/scm/IntegritySCM/validCheckoutThreadPoolSizeCheck?value='+escape(this.value)"/>
     	</f:entry>
-                
+
     </f:advanced>
 
-	<t:listScmBrowsers name="browser" />    
+	<t:listScmBrowsers name="browser" />
 </j:jelly>
