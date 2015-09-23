@@ -27,8 +27,8 @@ import com.mks.api.response.Response;
 public final class IntegrityCMMember
 {
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
-	private static final String ENCODING = "UTF-8"; 
-	
+	private static final String ENCODING = "UTF-8";
+
 	/**
 	 * Returns only the file name portion for this full server-side member path
 	 * @param memberID The full server side path for the Integrity member
@@ -49,7 +49,7 @@ public final class IntegrityCMMember
 			return memberID;
 		}
 	}
-	
+
 	/**
 	 * Returns an URL encoded string representation for invoking this Integrity member's annotated view
 	 * @param configPath Full server side path for this Integrity member's project/subproject
@@ -67,9 +67,9 @@ public final class IntegrityCMMember
 		sb.append(memberRev);
 		sb.append("&selection=");
 		sb.append(URLEncoder.encode(memberID, ENCODING));
-		return sb.toString();	
+		return sb.toString();
 	}
-	
+
 	/**
 	 * Returns an URL encoded string representation for invoking this Integrity member's differences view
 	 * This assumes that IntegrityCMProject.compareBaseline() was invoked!
@@ -87,14 +87,14 @@ public final class IntegrityCMMember
 		sb.append("&oldRevision=");
 		sb.append(oldMemberRev);
 		sb.append("&newRevision=");
-		sb.append(memberRev);		
+		sb.append(memberRev);
 		sb.append("&selection=");
-		sb.append(URLEncoder.encode(memberID, ENCODING));		
+		sb.append(URLEncoder.encode(memberID, ENCODING));
 		return sb.toString();
 	}
-	
+
 	/**
-	 * Performs a checkout of this Integrity Source File to a 
+	 * Performs a checkout of this Integrity Source File to a
 	 * working file location on the build server represented by targetFile
 	 * @param api Integrity API Session
 	 * @param configPath Full server side path for this Integrity member's project/subproject
@@ -125,11 +125,11 @@ public final class IntegrityCMMember
 		coCMD.addOption(new Option("revision", memberRev));
 		// Add the member selection
 		coCMD.addSelection(memberID);
-		
+
 		// Execute the checkout command
 		Response res = api.runCommand(coCMD);
 		LOGGER.fine("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
-		
+
 		// Return true if we were successful
 		if( res.getExitCode() == 0 )
 		{
@@ -147,7 +147,7 @@ public final class IntegrityCMMember
 			return false;
 		}
 	}
-	
+
 	/**
 	 * Performs a revision info on this Integrity Source File
 	 * @param api Integrity API Session
@@ -160,7 +160,7 @@ public final class IntegrityCMMember
 	{
 		// Initialize the return value
 		String author = "unknown";
-		
+
 		// Construct the revision-info command
 		Command revInfoCMD = new Command(Command.SI, "revisioninfo");
 		revInfoCMD.addOption(new Option("project", configPath));
@@ -171,7 +171,7 @@ public final class IntegrityCMMember
 		{
 			// Execute the revision-info command
 			Response res = api.runCommand(revInfoCMD);
-			LOGGER.fine("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());			
+			LOGGER.fine("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
 			// Return the author associated with this update
 			if( res.getExitCode() == 0 )
 			{
@@ -185,11 +185,11 @@ public final class IntegrityCMMember
     		LOGGER.severe(eh.getMessage());
     		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		aex.printStackTrace();
-		}	
-		
+		}
+
 		return author;
 	}
-	
+
 	/**
 	 * Returns the MD5 checksum hash for a file
 	 * @param targetFile File object representing the target file
@@ -216,5 +216,5 @@ public final class IntegrityCMMember
 		}
 		return result;
 	}
-	
+
 }

@@ -962,12 +962,6 @@ public class IntegritySCM extends SCM implements Serializable
 							desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());
 
 					listener.getLogger().println("Polling with include/exclude filters: " + pollingIncludeList + " / " + pollingExcludeList);
-//					listener.getLogger().println("Accept member 'foo.txt': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.txt"));
-//					listener.getLogger().println("Accept member 'foo.doc': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.doc"));
-//					listener.getLogger().println("Accept member 'foo.c': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.c"));
-//					listener.getLogger().println("Accept member 'foo.cpp': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.cpp"));
-//					listener.getLogger().println("Accept member 'foo.docx': " + DerbyUtils.acceptMember(pollingIncludeList, pollingExcludeList, "foo.docx"));
-
 
 					APISession api = APISession.create(coSettings);
         			if( null != api )

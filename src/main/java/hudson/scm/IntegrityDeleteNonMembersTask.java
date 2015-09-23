@@ -27,23 +27,13 @@ public class IntegrityDeleteNonMembersTask extends SlaveToMasterFileCallable<Boo
     public IntegrityDeleteNonMembersTask( Run<?, ?> run,TaskListener listener,FilePath alternateWorkspaceDir,IntegrityCMProject siProject)
     {
         this.run = run;
+
         this.listener = listener;
         this.alternateWorkspaceDir = alternateWorkspaceDir;
         this.siProject = siProject;
     }
 
-    public Boolean invoke(File f, VirtualChannel channel) throws IOException, InterruptedException 
-    {
-        /*
-        Job<?, ?> rootProject = getRootProject(run.getParent());
-
-        if (!(rootProject.getScm() instanceof IntegritySCM))
-        {
-            listener.getLogger().println("Integrity DeleteNonMembers is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
-            return true;
-        }
-        */
-        
+    public Boolean invoke(File f, VirtualChannel channel) throws IOException, InterruptedException{
         try 
         {
             deleteNonMembers(run, listener);
@@ -57,25 +47,7 @@ public class IntegrityDeleteNonMembersTask extends SlaveToMasterFileCallable<Boo
         }
         return true;
     }
-    
-    /**
-     * Obtains the root project for the build
-     * @param abstractProject
-     * @return
-     */
-    private Job<?, ?> getRootProject(Job<?, ?> job
-    )
-    {
-        if (job.getParent() instanceof Hudson)
-        {
-            return job;
-        }
-        else
-        {
-            return getRootProject((Job<?,?>) job.getParent());
-        }
-    }
-    
+
     /**
      * Delete all members in the build workspace that are not under version control
      * @param build

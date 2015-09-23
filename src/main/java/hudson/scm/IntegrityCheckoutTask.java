@@ -31,7 +31,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 
 	private static final long serialVersionUID = 1240357991626897900L;
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
-	private static final int CHECKOUT_TRESHOLD = 500;	
+	private static final int CHECKOUT_TRESHOLD = 500;
 	private final List<Hashtable<CM_PROJECT, Object>> projectMembersList;
 	private final List<String> dirList;
 	private final String lineTerminator;
@@ -49,10 +49,10 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
     private int dropCount;
     private int fetchCount;
     private int checkoutThreadPoolSize;
-	
+
 	/**
-	 * Hudson supports building on distributed machines, and the SCM plugin must 
-	 * be able to be executed on other machines than the master. 
+	 * Hudson supports building on distributed machines, and the SCM plugin must
+	 * be able to be executed on other machines than the master.
 	 * @param projectMembersList A list of all the members that are in this Integrity SCM project
 	 * @param dirList A list of all the unique directories in this Integrity SCM project
 	 * @param alternateWorkspaceDir Specifies an alternate location for checkout other than the default workspace
@@ -82,7 +82,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 		this.checksumHash = new ConcurrentHashMap<String, String>();
 		LOGGER.fine("Integrity Checkout Task Created!");
 	}
-	
+
 	/**
 	 * Creates the folder structure for the project's contents allowing empty folders to be created
 	 * @param workspace
@@ -100,7 +100,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 			}
 		}
 	}
-	
+
 	/**
 	 * Returns all the changes to the checksums that were performed
 	 * @return
@@ -109,7 +109,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 	{
 		return checksumHash;
 	}
-	
+
 	/**
 	 * Nested class to manage the open file handle count for the entire checkout process
 	 */
@@ -125,7 +125,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
             return new Integer(1);
         }
 	}
-	
+
 	/**
 	 * Nested class to manage the APISessions for the checkout thread pool
 	 */
@@ -134,9 +134,9 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
         IntegrityConfigurable integrityConfig;
         // Using a thread safe Vector instead of a List
         private Vector<APISession> sessions = new Vector<APISession>();
-   
+
         /**
-         * Initialize our constructor with the all the information needed to create an APISession 
+         * Initialize our constructor with the all the information needed to create an APISession
          * @param ipHost Integration Point host name
          * @param ipPortNum Integration Point port
          * @param host Integrity Server host name
@@ -175,7 +175,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
          * Returns an initial APISession for this thread
          */
         @Override
-        protected APISession initialValue() 
+        protected APISession initialValue()
         {
         	APISession api = APISession.create(integrityConfig);
         	if( null != api )
@@ -189,11 +189,11 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
         	}
         }
     }
-    
+
     /**
      * Nested class that performs the actual checkout operation
      */
-    private final class CheckOutTask implements Callable<Void> 
+    private final class CheckOutTask implements Callable<Void>
     {
         private final ThreadLocalAPISession apiSession;
         private final ThreadLocalOpenFileHandler openFileHandler;
@@ -204,8 +204,8 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
         private final Timestamp memberTimestamp;
         private final File targetFile;
         private final boolean calculateChecksum;
-        
-        public CheckOutTask(ThreadLocalAPISession apiSession, ThreadLocalOpenFileHandler openFileHandler, String memberName, String configPath, 
+
+        public CheckOutTask(ThreadLocalAPISession apiSession, ThreadLocalOpenFileHandler openFileHandler, String memberName, String configPath,
         					String memberID, String memberRev, Timestamp memberTimestamp, File targetFile, boolean calculateChecksum)
         {
             this.apiSession = apiSession;
@@ -218,8 +218,8 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
             this.targetFile = targetFile;
             this.calculateChecksum = calculateChecksum;
         }
-        
-        public Void call() throws Exception 
+
+        public Void call() throws Exception
         {
             APISession api = apiSession.get();
             if( null != api )
@@ -236,6 +236,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
             	try
             	{
             		IntegrityCMMember.checkout(api, configPath, memberID, memberRev, memberTimestamp, targetFile, restoreTimestamp, lineTerminator);
+					listener.getLogger().println("Checked out " + memberId, " rev: " + memberRev + " from config: " + configPath);
             	}
             	catch( APIException aex )
             	{
@@ -245,7 +246,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
             		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
             		throw new Exception(eh.getMessage());
             	}
-            
+
             	openFileHandler.set( openFileHandler.get() + 1);
             	if(calculateChecksum)
             	{
@@ -260,11 +261,11 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
         }
 
     }
-    
+
 	/**
 	 * This task wraps around the code necessary to checkout Integrity CM Members on remote machines
 	 */
-	public Boolean invoke(File workspaceFile, VirtualChannel channel) throws IOException 
+	public Boolean invoke(File workspaceFile, VirtualChannel channel) throws IOException
     {
 		// Figure out where we should be checking out this project
 		File checkOutDir = (null != alternateWorkspaceDir && alternateWorkspaceDir.length() > 0) ? new File(alternateWorkspaceDir) : workspaceFile;
@@ -281,17 +282,17 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 		{
 			// Keep count of the open file handles generated on the server
 			if( cleanCopy )
-			{ 
-				listener.getLogger().println("A clean copy is requested; deleting contents of " + workspace); 
-				LOGGER.fine("Deleting contents of workspace " + workspace); 
+			{
+				listener.getLogger().println("A clean copy is requested; deleting contents of " + workspace);
+				LOGGER.fine("Deleting contents of workspace " + workspace);
 				workspace.deleteContents();
 				listener.getLogger().println("Populating clean workspace...");
 			}
-				
+
 			// Create an empty folder structure first
 			createFolderStructure(workspace);
 
-			// Perform a synchronize of each file in the member list... 
+			// Perform a synchronize of each file in the member list...
 			for( Iterator<Hashtable<CM_PROJECT, Object>> it = projectMembersList.iterator(); it.hasNext(); )
 			{
 				Hashtable<CM_PROJECT, Object> memberInfo = it.next();
@@ -303,11 +304,11 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 				Timestamp memberTimestamp = (Timestamp)memberInfo.get(CM_PROJECT.TIMESTAMP);
 				String configPath = memberInfo.get(CM_PROJECT.CONFIG_PATH).toString();
 				String checksum = (null == memberInfo.get(CM_PROJECT.CHECKSUM) ? "" : memberInfo.get(CM_PROJECT.CHECKSUM).toString());
-			
+
 				if( cleanCopy && deltaFlag != 3 )
 				{
-					LOGGER.fine("Attempting to checkout file: " + targetFile.getAbsolutePath() + " at revision " + memberRev);		
-					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));			
+					LOGGER.fine("Attempting to checkout file: " + targetFile.getAbsolutePath() + " at revision " + memberRev);
+					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
 				}
 				else if( deltaFlag == 0 && fetchChangedWorkspaceFiles && checksum.length() > 0 )
 				{
@@ -322,15 +323,15 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 				{
 					LOGGER.fine("Attempting to get new file: " + targetFile.getAbsolutePath() + " at revision " + memberRev);
 					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
-					addCount++;									
+					addCount++;
 				}
 				else if( deltaFlag == 2 )
 				{
 					LOGGER.fine("Attempting to update file: " + targetFile.getAbsolutePath() + " to revision " + memberRev);
 					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
-					updateCount++;														
+					updateCount++;
 				}
-				else if( deltaFlag == 3 )					
+				else if( deltaFlag == 3 )
 				{
 					LOGGER.fine("Attempting to drop file: " + targetFile.getAbsolutePath() + " was at revision " + memberRev);
 					dropCount++;
@@ -339,20 +340,20 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 						listener.getLogger().println("Failed to clean up workspace file " + targetFile.getAbsolutePath() + "!");
 						return false;
 					}
-				}				
+				}
 			}
-			
+
             int checkoutMembers = 0;
             int previousCount = 0;
             int canceledMembers = 0;
             int totalMembers = coThreads.size();
-            while (!coThreads.isEmpty()) 
+            while (!coThreads.isEmpty())
             {
                 @SuppressWarnings("rawtypes")
                 Iterator<Future> iter = coThreads.iterator();
-                while (iter.hasNext()) 
+                while (iter.hasNext())
                 {
-                    Future<?> future = iter.next();                    
+                    Future<?> future = iter.next();
                     if( future.isCancelled() )
                     {
                         listener.getLogger().println("Checkout thread " + future.toString() + " was cancelled");
@@ -362,11 +363,11 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
                     else if( future.isDone() )
                     {
                     	// Look for the result of this thread's execution...
-                        try 
+                        try
                         {
     						future.get();
-    					} 
-                        catch( ExecutionException e ) 
+    					}
+                        catch( ExecutionException e )
                         {
                     		listener.getLogger().println(e.getMessage());
                     		LOGGER.log(Level.SEVERE, "ExecutionException", e);
@@ -375,7 +376,7 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
                     		{
                     			LOGGER.severe("\tat " + st[i].getClassName() + "." + st[i].getMethodName() + "(" + st[i].getFileName() + ":" + st[i].getLineNumber() + ")");
                     		}
-                    		
+
                     		if( null != e.getMessage() && e.getMessage().indexOf("Unbuffered entity enclosing request can not be repeated") > 0 )
                     		{
                     			// ignore...
@@ -385,8 +386,8 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
                     			return false;
                     		}
     					}
-                        
-                        checkoutMembers++;  
+
+                        checkoutMembers++;
                         iter.remove();
                     }
                 }
@@ -400,17 +401,17 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
             }
             executor.shutdown();
             executor.awaitTermination(2, TimeUnit.MINUTES);
-            
+
             // Lets advice the user that we've checked out all the members
-            if (cleanCopy) 
+            if (cleanCopy)
             {
                 listener.getLogger().println("Successfully checked out " + projectMembersList.size() + " files!");
-            } 
-            else 
+            }
+            else
             {
                 // Lets advice the user that we've performed the updates to the workspace
                 listener.getLogger().println("Successfully updated workspace with " + (addCount + updateCount) + " updates and cleaned up " + dropCount + " files!");
-                if (fetchChangedWorkspaceFiles && fetchCount > 0) 
+                if (fetchChangedWorkspaceFiles && fetchCount > 0)
                 {
                     listener.getLogger().println("Additionally, a total of " + fetchCount + " files were restored to their original repository state!");
                 }
@@ -419,12 +420,12 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 		catch( InterruptedException iex )
 		{
     		LOGGER.severe("Interrupted Exception caught...");
-    		listener.getLogger().println("An Interrupted Exception was caught!"); 
+    		listener.getLogger().println("An Interrupted Exception was caught!");
     		LOGGER.severe(iex.getMessage());
     		listener.getLogger().println(iex.getMessage());
     		listener.getLogger().println("Failed to clean up workspace (" + workspace + ") contents!");
-    		return false;			
-		}	
+    		return false;
+		}
 		finally
 		{
 		    if( generateAPISession != null )
@@ -432,8 +433,8 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
 		    	generateAPISession.remove();
 		    }
 		}
-		
-	    //If we got here, everything is good on the checkout...		
+
+	    //If we got here, everything is good on the checkout...
 		return true;
     }
 }
