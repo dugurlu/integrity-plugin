@@ -236,7 +236,6 @@ public class IntegrityCheckoutTask extends SlaveToMasterFileCallable<Boolean> {
             	try
             	{
             		IntegrityCMMember.checkout(api, configPath, memberID, memberRev, memberTimestamp, targetFile, restoreTimestamp, lineTerminator);
-					listener.getLogger().println("Checked out " + memberId, " rev: " + memberRev + " from config: " + configPath);
             	}
             	catch( APIException aex )
             	{
