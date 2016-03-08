@@ -1,0 +1,24 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<f:entry title="Server Configuration ${hudson.utils.Util.filter(scms,hudson.scm.IntegritySCM.class)}" field="serverConfig" help="/plugin/integrity-plugin/help-ServerConfig.html">
+		<f:select />
+	</f:entry>
+	
+	<f:entry title="Integrity Project" field="ciConfigPath">
+		<f:textbox clazz="required" name="ciConfigPath" value="${instance.ciConfigPath}" />
+	</f:entry>
+	
+	<f:entry title="Build Output Directory" field="ciWorkspaceDir">
+		<f:textbox clazz="required" name="ciWorkspaceDir" value="${instance.ciWorkspaceDir}" />
+	</f:entry>
+
+	<f:entry title="Includes Filter" field="includes">
+		<f:textbox name="includes" value="${instance.includes} "/> 
+	</f:entry>
+
+	<f:entry title="Excludes Filter" field="excludes">
+		<f:textbox name="excludes" value="${instance.excludes} "/> 
+	</f:entry>
+
+</j:jelly>
+

@@ -1,0 +1,64 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<f:entry title="Server Configuration ${hudson.utils.Util.filter(scms,hudson.scm.IntegritySCM.class)}" field="serverConfig" help="/plugin/integrity-plugin/help-ServerConfig.html">
+		<f:select />
+	</f:entry>
+	
+	<f:entry title="Query Definition" field="queryDefinition">
+		<f:textbox name="queryDefinition" value="${h.ifThenElse(instance.queryDefinition==null,descriptor.queryDefinition,instance.queryDefinition)}"/>
+	</f:entry>
+	
+	<f:entry title="Status Field Name" field="stateField">
+		<f:textbox name="stateField" value="${instance.stateField}"/>
+	</f:entry>
+	
+	<f:entry title="Success Value" field="successValue">
+		<f:textbox name="successValue" value="${instance.successValue}"/>
+	</f:entry>
+
+	<f:entry title="Failure Value" field="failureValue">
+		<f:textbox name="failureValue" value="${instance.failureValue}"/>
+	</f:entry>
+
+	<f:entry title="Log Field Name (Rich Content)" field="logField">
+		<f:textbox name="logField" value="${instance.logField}"/>
+	</f:entry>	
+
+	<f:entry title="Test Session Field" field="testSessionField">
+		<f:textbox name="testSessionField" value="${instance.testSessionField}"/>
+	</f:entry>	
+
+	<f:entry title="Test Session State Field" field="testSessionStateField">
+		<f:textbox name="testSessionStateField" value="${instance.testSessionStateField}"/>
+	</f:entry>	
+
+	<f:entry title="Test Session Active State" field="testSessionActiveState">
+		<f:textbox name="testSessionActiveState" value="${instance.testSessionActiveState}"/>
+	</f:entry>	
+
+	<f:entry title="Test Session Tests Field" field="testSessionTestsField">
+		<f:textbox name="testSessionTestsField" value="${instance.testSessionTestsField}"/>
+	</f:entry>	
+
+	<f:entry title="Test Case Test Name Field (External ID)" field="testCaseTestNameField">
+		<f:textbox name="testCaseTestNameField" value="${instance.testCaseTestNameField}"/>
+	</f:entry>	
+	
+	<f:entry title="Contains Field" field="testSuiteContainsField">
+		<f:textbox name="testSuiteContainsField" value="${h.ifThenElse(instance.testSuiteContainsField==null,descriptor.testSuiteContainsField,instance.testSuiteContainsField)}"/>
+	</f:entry>
+
+	<f:entry title="Passed Verdict Name" field="testPassedVerdictName">
+		<f:textbox name="testPassedVerdictName" value="${h.ifThenElse(instance.testPassedVerdictName==null,descriptor.testPassedVerdictName,instance.testPassedVerdictName)}"/>
+	</f:entry>
+
+	<f:entry title="Failed Verdict Name" field="testFailedVerdictName">
+		<f:textbox name="testFailedVerdictName" value="${h.ifThenElse(instance.testFailedVerdictName==null,descriptor.testFailedVerdictName,instance.testFailedVerdictName)}"/>
+	</f:entry>
+
+	<f:entry title="Skipped Verdict Name" field="testSkippedVerdictName">
+		<f:textbox name="testSkippedVerdictName" value="${h.ifThenElse(instance.testSkippedVerdictName==null,descriptor.testSkippedVerdictName,instance.testSkippedVerdictName)}"/>
+	</f:entry>
+
+</j:jelly>
+

@@ -1,0 +1,13 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<f:entry title="Server Configuration ${hudson.utils.Util.filter(scms,hudson.scm.IntegritySCM.class)}" field="serverConfig" help="/plugin/integrity-plugin/help-ServerConfig.html">
+		<f:select />
+	</f:entry>
+	
+	<f:entry title="Checkpoint Label" field="checkpointLabel">
+    	<f:textbox clazz="required" checkMessage="'Checkpoint Label' is a required field!" name="checkpointLabel" value="${h.ifThenElse(instance.checkpointLabel==null,descriptor.checkpointLabel,instance.checkpointLabel)}" 
+    		checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/checkpointLabelCheck?value='+escape(this.value)" />
+ 	</f:entry>
+
+</j:jelly>
+
