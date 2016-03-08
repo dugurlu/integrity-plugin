@@ -318,8 +318,13 @@ public class IntegrityCMProject implements Serializable
 		item.appendChild(revision);
 
 		// Adaptation for CC-PS
+		// check whether a previous version exists and set the value accordingly
+		String pRev = "";
+		if(memberInfo.contains(CM_PROJECT.OLD_REVISION)) {
+			pRev = memberInfo.get(CM_PROJECT.OLD_REVISION).toString();
+		}
 		Element previousRevision = xmlDoc.createElement("prevRev");
-		previousRevision.appendChild(xmlDoc.createTextNode(memberInfo.get(CM_PROJECT.OLD_REVISION).toString()));
+		previousRevision.appendChild(xmlDoc.createTextNode(pRev));
 		item.appendChild(previousRevision);
 		// End of adaptation
 

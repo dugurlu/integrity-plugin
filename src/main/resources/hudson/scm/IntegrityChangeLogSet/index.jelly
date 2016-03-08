@@ -13,7 +13,7 @@
   	<th class="changeset-message">Filename</th>
   	<th class="changeset-message">Revision</th>
     <!-- Adapatation for CC-PS -->
-    <th class="changeset-message">Previous Revision</th>
+    <th class="changeset-message">Prev. Revision</th>
     <!-- End of adaptation -->
   	<th class="changeset-message">Date</th>
   	<th class="changeset-message">Comments</th>
