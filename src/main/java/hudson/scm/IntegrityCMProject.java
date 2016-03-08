@@ -320,7 +320,7 @@ public class IntegrityCMProject implements Serializable
 		// Adaptation for CC-PS
 		// check whether a previous version exists and set the value accordingly
 		String pRev = "";
-		if(memberInfo.contains(CM_PROJECT.OLD_REVISION)) {
+		if(memberInfo.containsKey(CM_PROJECT.OLD_REVISION)) {
 			pRev = memberInfo.get(CM_PROJECT.OLD_REVISION).toString();
 		}
 		Element previousRevision = xmlDoc.createElement("prevRev");
