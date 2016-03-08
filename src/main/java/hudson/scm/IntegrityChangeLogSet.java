@@ -89,7 +89,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		private String author;
 		private String rev;
 
-		// Adaptation for CC-PC
+		// Adaptation for CC-PS
 		// also store the previous revision for changelog entries
 		private String prevRev;
 		// End of adaptation

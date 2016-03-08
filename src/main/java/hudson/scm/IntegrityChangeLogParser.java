@@ -48,7 +48,7 @@ public class IntegrityChangeLogParser extends ChangeLogParser
 		digester.addBeanPropertySetter("*/items/item/user");
 		digester.addBeanPropertySetter("*/items/item/rev");
 
-    // Adaptation for CC-PC
+    // Adaptation for CC-PS
     digester.addBeanPropertySetter("*/items/item/prevRev");
     // End of adaptation
 
